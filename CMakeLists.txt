@@ -15,11 +15,13 @@ add_library(
   src/config.hpp
   src/secrets.cpp
   src/secrets.hpp
+  src/settings-dialog.cpp
+  src/settings-dialog.hpp
 )
 find_package(libobs REQUIRED)
 find_package(obs-frontend-api REQUIRED)
-find_package(Qt6 REQUIRED COMPONENTS Core)
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::libobs OBS::obs-frontend-api Qt6::Core)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::libobs OBS::obs-frontend-api Qt6::Core Qt6::Widgets)
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
 
 if(WIN32)
