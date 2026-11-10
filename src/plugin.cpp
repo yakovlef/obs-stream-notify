@@ -8,6 +8,11 @@
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 
+#include "config.hpp"
+#include "settings-dialog.hpp"
+
+#include <QWidget>
+
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE("stream-notify", "en-US")
 
@@ -21,6 +26,13 @@ void frontendEvent(obs_frontend_event event, void *)
         blog(LOG_INFO, "[stream-notify] Streaming stopped");
 }
 
+void openSettings(void *)
+{
+    auto *mainWindow = static_cast<QWidget *>(obs_frontend_get_main_window());
+    auto config = stream_notify::loadConfig();
+    if (stream_notify::showSettingsDialog(mainWindow, config)) stream_notify::saveConfig(config);
+}
+
 } // namespace
 
 const char *obs_module_description(void)
@@ -31,6 +43,7 @@ const char *obs_module_description(void)
 bool obs_module_load(void)
 {
     obs_frontend_add_event_callback(frontendEvent, nullptr);
+    obs_frontend_add_tools_menu_item(obs_module_text("Menu.Open"), openSettings, nullptr);
     blog(LOG_INFO, "[stream-notify] loaded");
     return true;
 }
