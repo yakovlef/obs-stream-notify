@@ -8,10 +8,11 @@ include(compilerconfig)
 include(defaults)
 include(helpers)
 
-add_library(${CMAKE_PROJECT_NAME} MODULE src/plugin.cpp)
+add_library(${CMAKE_PROJECT_NAME} MODULE src/plugin.cpp src/config.cpp src/config.hpp)
 find_package(libobs REQUIRED)
 find_package(obs-frontend-api REQUIRED)
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::libobs OBS::obs-frontend-api)
+find_package(Qt6 REQUIRED COMPONENTS Core)
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::libobs OBS::obs-frontend-api Qt6::Core)
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
 
 if(WIN32)
