@@ -6,6 +6,7 @@
  */
 
 #include "config.hpp"
+#include "secrets.hpp"
 
 #include <obs-module.h>
 
@@ -37,7 +38,7 @@ Config loadConfig()
     Config config;
     obs_data_t *data = obs_data_create_from_json_file_safe(configPath().constData(), "bak");
     if (!data) return config;
-    config.token = readString(data, "telegram_token");
+    config.token = unprotectSecret(readString(data, "telegram_token"));
     config.chat = readString(data, "telegram_chat");
     obs_data_release(data);
     return config;
@@ -46,7 +47,7 @@ Config loadConfig()
 void saveConfig(const Config &config)
 {
     obs_data_t *data = obs_data_create();
-    obs_data_set_string(data, "telegram_token", config.token.toUtf8().constData());
+    obs_data_set_string(data, "telegram_token", protectSecret(config.token).toUtf8().constData());
     obs_data_set_string(data, "telegram_chat", config.chat.toUtf8().constData());
     if (!obs_data_save_json_safe(data, configPath().constData(), "tmp", "bak"))
         blog(LOG_WARNING, "[stream-notify] Could not save settings");

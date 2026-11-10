@@ -8,7 +8,14 @@ include(compilerconfig)
 include(defaults)
 include(helpers)
 
-add_library(${CMAKE_PROJECT_NAME} MODULE src/plugin.cpp src/config.cpp src/config.hpp)
+add_library(
+  ${CMAKE_PROJECT_NAME} MODULE
+  src/plugin.cpp
+  src/config.cpp
+  src/config.hpp
+  src/secrets.cpp
+  src/secrets.hpp
+)
 find_package(libobs REQUIRED)
 find_package(obs-frontend-api REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Core)
@@ -17,4 +24,5 @@ set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_nam
 
 if(WIN32)
   target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE NOMINMAX)
+  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Crypt32)
 endif()
