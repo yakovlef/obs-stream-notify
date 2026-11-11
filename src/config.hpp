@@ -14,6 +14,10 @@ namespace stream_notify {
 struct Config {
     QString token;
     QString chat;
+    QString text;
+    QString button;
+    QString url;
+    int delay = 5;
 };
 
 Config loadConfig();
