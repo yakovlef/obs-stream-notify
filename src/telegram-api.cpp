@@ -32,8 +32,11 @@ QByteArray sendMessageBody(const QString &chat, const Post &post)
 QString replyMarkup(const QString &buttonText, const QString &url)
 {
     if (buttonText.isEmpty() || url.isEmpty()) return {};
-    const QJsonArray row{QJsonObject{{"text", buttonText}, {"url", url}}};
-    const QJsonObject root{{"inline_keyboard", QJsonArray{row}}};
+    QJsonArray row;
+    row.append(QJsonObject{{"text", buttonText}, {"url", url}});
+    QJsonArray keyboard;
+    keyboard.append(row);
+    const QJsonObject root{{"inline_keyboard", keyboard}};
     return QString::fromUtf8(QJsonDocument(root).toJson(QJsonDocument::Compact));
 }
 
