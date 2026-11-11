@@ -2,6 +2,7 @@
 /build*/
 /out/
 /release/
+/stage/
 /.tools/
 /.deps/
 /_deps/
