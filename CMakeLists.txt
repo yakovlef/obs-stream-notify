@@ -38,3 +38,22 @@ if(WIN32)
   target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE NOMINMAX)
   target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Crypt32)
 endif()
+
+include(CTest)
+if(BUILD_TESTING)
+  add_executable(
+    ${CMAKE_PROJECT_NAME}-tests
+    tests/stream-notify-tests.cpp
+    src/message-format.cpp
+    src/telegram-api.cpp
+  )
+  target_include_directories(${CMAKE_PROJECT_NAME}-tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+  target_link_libraries(${CMAKE_PROJECT_NAME}-tests PRIVATE Qt6::Core)
+  add_test(NAME ${CMAKE_PROJECT_NAME}-tests COMMAND ${CMAKE_PROJECT_NAME}-tests)
+  if(WIN32)
+    set_tests_properties(
+      ${CMAKE_PROJECT_NAME}-tests
+      PROPERTIES ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
+    )
+  endif()
+endif()
