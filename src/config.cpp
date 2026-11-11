@@ -37,9 +37,16 @@ Config loadConfig()
 {
     Config config;
     obs_data_t *data = obs_data_create_from_json_file_safe(configPath().constData(), "bak");
-    if (!data) return config;
+    if (!data) data = obs_data_create();
+    obs_data_set_default_string(data, "post_text", obs_module_text("Post.DefaultText"));
+    obs_data_set_default_string(data, "post_button", obs_module_text("Post.DefaultButton"));
+    obs_data_set_default_int(data, "post_delay", 5);
     config.token = unprotectSecret(readString(data, "telegram_token"));
     config.chat = readString(data, "telegram_chat");
+    config.text = readString(data, "post_text");
+    config.button = readString(data, "post_button");
+    config.url = readString(data, "post_url");
+    config.delay = static_cast<int>(obs_data_get_int(data, "post_delay"));
     obs_data_release(data);
     return config;
 }
@@ -49,6 +56,10 @@ void saveConfig(const Config &config)
     obs_data_t *data = obs_data_create();
     obs_data_set_string(data, "telegram_token", protectSecret(config.token).toUtf8().constData());
     obs_data_set_string(data, "telegram_chat", config.chat.toUtf8().constData());
+    obs_data_set_string(data, "post_text", config.text.toUtf8().constData());
+    obs_data_set_string(data, "post_button", config.button.toUtf8().constData());
+    obs_data_set_string(data, "post_url", config.url.toUtf8().constData());
+    obs_data_set_int(data, "post_delay", config.delay);
     if (!obs_data_save_json_safe(data, configPath().constData(), "tmp", "bak"))
         blog(LOG_WARNING, "[stream-notify] Could not save settings");
     obs_data_release(data);

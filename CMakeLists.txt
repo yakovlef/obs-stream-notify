@@ -20,11 +20,18 @@ add_library(
   src/secrets.hpp
   src/settings-dialog.cpp
   src/settings-dialog.hpp
+  src/telegram-api.cpp
+  src/telegram-api.hpp
+  src/telegram-notifier.cpp
+  src/telegram-notifier.hpp
 )
 find_package(libobs REQUIRED)
 find_package(obs-frontend-api REQUIRED)
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::libobs OBS::obs-frontend-api Qt6::Core Qt6::Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network)
+target_link_libraries(
+  ${CMAKE_PROJECT_NAME}
+  PRIVATE OBS::libobs OBS::obs-frontend-api Qt6::Core Qt6::Widgets Qt6::Network
+)
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
 
 if(WIN32)

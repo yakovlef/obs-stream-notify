@@ -14,6 +14,8 @@
 #include <QFormLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QSpinBox>
 #include <QVBoxLayout>
 
 namespace stream_notify {
@@ -44,12 +46,27 @@ bool showSettingsDialog(QWidget *parent, Config &config)
     token->setEchoMode(QLineEdit::Password);
     auto *chat = new QLineEdit(config.chat);
     chat->setPlaceholderText(text("Telegram.ChannelPlaceholder"));
+    auto *url = new QLineEdit(config.url);
+    url->setPlaceholderText("https://twitch.tv/your_channel");
+    auto *button = new QLineEdit(config.button);
+    auto *delay = new QSpinBox;
+    delay->setRange(0, 3600);
+    delay->setSuffix(text("Delay.Suffix"));
+    delay->setValue(config.delay);
+    auto *body = new QPlainTextEdit(config.text);
+    body->setPlaceholderText(text("Post.TextPlaceholder"));
 
     auto *form = new QFormLayout;
     form->addRow(text("Telegram.BotToken"), token);
     form->addRow(QString(), hint("Telegram.BotHint"));
     form->addRow(text("Telegram.Channel"), chat);
     form->addRow(QString(), hint("Telegram.ChannelHint"));
+    form->addRow(text("Post.StreamUrl"), url);
+    form->addRow(text("Post.ButtonText"), button);
+    form->addRow(text("Post.Delay"), delay);
+    form->addRow(QString(), hint("Post.DelayHint"));
+    form->addRow(text("Post.Text"), body);
+    form->addRow(QString(), hint("Post.Placeholders"));
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
@@ -62,6 +79,10 @@ bool showSettingsDialog(QWidget *parent, Config &config)
     if (dialog.exec() != QDialog::Accepted) return false;
     config.token = token->text().trimmed();
     config.chat = chat->text().trimmed();
+    config.url = url->text().trimmed();
+    config.button = button->text().trimmed();
+    config.delay = delay->value();
+    config.text = body->toPlainText();
     return true;
 }
 
