@@ -13,6 +13,9 @@ add_library(
   src/plugin.cpp
   src/config.cpp
   src/config.hpp
+  src/message-format.cpp
+  src/message-format.hpp
+  src/notifier.hpp
   src/secrets.cpp
   src/secrets.hpp
   src/settings-dialog.cpp
