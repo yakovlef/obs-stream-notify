@@ -57,6 +57,8 @@ void testSendMessageBody()
     expect(form.queryItemValue("chat_id") == "@chan", "chat id is sent");
     expect(form.queryItemValue("text", QUrl::FullyDecoded) == "Hi & bye", "text survives form encoding");
     expect(form.hasQueryItem("reply_markup"), "button adds reply markup");
+    const QByteArray plus = telegram::sendMessageBody("@chan", Post{"C++ 1+1", "", "", {}});
+    expect(plus.contains("C%2B%2B%201%2B1"), "plus signs are percent-encoded");
     const QUrlQuery plain(QString::fromUtf8(telegram::sendMessageBody("@chan", Post{"Hi", "", "", {}})));
     expect(!plain.hasQueryItem("reply_markup"), "no button means no reply markup");
 }

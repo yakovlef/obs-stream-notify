@@ -38,9 +38,15 @@ QUrlQuery messageFields(const QString &chat, const Post &post, const QString &te
 
 namespace {
 
+// QUrlQuery leaves "+" unencoded, and Telegram decodes it as a space.
 QByteArray encode(const QUrlQuery &form)
 {
-    return form.toString(QUrl::FullyEncoded).toUtf8();
+    QByteArray body;
+    for (const auto &[name, value] : form.queryItems(QUrl::FullyDecoded)) {
+        if (!body.isEmpty()) body += '&';
+        body += QUrl::toPercentEncoding(name) + '=' + QUrl::toPercentEncoding(value);
+    }
+    return body;
 }
 
 } // namespace
