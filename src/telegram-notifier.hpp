@@ -9,7 +9,10 @@
 
 #include "notifier.hpp"
 
+#include <QSet>
+
 class QNetworkAccessManager;
+class QNetworkReply;
 
 namespace stream_notify {
 
@@ -22,10 +25,13 @@ public:
 
 private:
     void call(const QString &method, const QByteArray &body, Callback done);
+    void sendPhoto(const Post &post, Callback done);
+    void finish(QNetworkReply *reply, Callback done);
 
     QNetworkAccessManager &network;
     QString token;
     QString chat;
+    QSet<qint64> photoMessages;
 };
 
 } // namespace stream_notify

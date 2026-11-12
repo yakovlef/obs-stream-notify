@@ -15,6 +15,7 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QNetworkAccessManager>
 #include <QTimer>
@@ -44,9 +45,23 @@ public:
         timer.start(config.delay * 1000);
     }
 
+    void screenshotTaken()
+    {
+        if (!awaitingScreenshot) return;
+        awaitingScreenshot = false;
+        char *path = obs_frontend_get_last_screenshot();
+        const QString file = QString::fromUtf8(path);
+        bfree(path);
+        QByteArray image = readFile(file);
+        if (!image.isEmpty()) QFile::remove(file);
+        else image = readFile(config.imagePath);
+        send(image);
+    }
+
     void streamingStopped()
     {
         ++session;
+        awaitingScreenshot = false;
         timer.stop();
         if (messageId > 0) finishPost(notifier, messageId);
         messageId = 0;
@@ -57,6 +72,7 @@ private:
     QTimer timer;
     int session = 0;
     qint64 messageId = 0;
+    bool awaitingScreenshot = false;
     std::shared_ptr<Notifier> notifier;
     QNetworkAccessManager network;
 
@@ -67,7 +83,30 @@ private:
             blog(LOG_WARNING, "[stream-notify] Telegram bot token or channel is not set");
             return;
         }
-        const Post post{renderPostText(config.text, {{"url", config.url}}), config.button, config.url};
+        if (!config.captureScene) {
+            send(readFile(config.imagePath));
+            return;
+        }
+        awaitingScreenshot = true;
+        obs_frontend_take_screenshot();
+        QTimer::singleShot(5000, &timer, [this, expected = session] {
+            if (!awaitingScreenshot || expected != session) return;
+            awaitingScreenshot = false;
+            blog(LOG_WARNING, "[stream-notify] Scene screenshot timed out");
+            send(readFile(config.imagePath));
+        });
+    }
+
+    static QByteArray readFile(const QString &path)
+    {
+        QFile file(path);
+        if (path.isEmpty() || !file.open(QIODevice::ReadOnly)) return {};
+        return file.readAll();
+    }
+
+    void send(const QByteArray &image)
+    {
+        const Post post{renderPostText(config.text, {{"url", config.url}}), config.button, config.url, image};
         notifier = std::make_shared<TelegramNotifier>(network, config.token, config.chat);
         notifier->publish(post, [this, sentSession = session, sent = notifier](qint64 id, const QString &error) {
             if (!error.isEmpty()) {
@@ -88,7 +127,7 @@ private:
                 blog(LOG_WARNING, "[stream-notify] Telegram end update failed: %s", error.toUtf8().constData());
         };
         if (config.endAction == EndAction::Delete) target->remove(id, done);
-        else target->edit(id, Post{renderPostText(config.endText, {{"url", config.url}}), {}, {}}, done);
+        else target->edit(id, Post{renderPostText(config.endText, {{"url", config.url}}), {}, {}, {}}, done);
     }
 };
 
@@ -99,6 +138,7 @@ void frontendEvent(obs_frontend_event event, void *)
     if (!plugin) return;
     if (event == OBS_FRONTEND_EVENT_STREAMING_STARTED) plugin->streamingStarted();
     else if (event == OBS_FRONTEND_EVENT_STREAMING_STOPPED) plugin->streamingStopped();
+    else if (event == OBS_FRONTEND_EVENT_SCREENSHOT_TAKEN) plugin->screenshotTaken();
     else if (event == OBS_FRONTEND_EVENT_EXIT) plugin.reset();
 }
 

@@ -9,13 +9,17 @@
 
 #include <obs-module.h>
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDialog>
 #include <QDialogButtonBox>
+#include <QFileDialog>
 #include <QFormLayout>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPlainTextEdit>
+#include <QPushButton>
 #include <QSpinBox>
 #include <QVBoxLayout>
 
@@ -56,6 +60,18 @@ bool showSettingsDialog(QWidget *parent, Config &config)
     delay->setValue(config.delay);
     auto *body = new QPlainTextEdit(config.text);
     body->setPlaceholderText(text("Post.TextPlaceholder"));
+    auto *image = new QLineEdit(config.imagePath);
+    auto *browse = new QPushButton(text("Image.Browse"));
+    QObject::connect(browse, &QPushButton::clicked, image, [image, &dialog] {
+        const QString path = QFileDialog::getOpenFileName(&dialog, text("Image.Browse"), image->text(),
+                                                          "Images (*.png *.jpg *.jpeg)");
+        if (!path.isEmpty()) image->setText(path);
+    });
+    auto *imageRow = new QHBoxLayout;
+    imageRow->addWidget(image, 1);
+    imageRow->addWidget(browse);
+    auto *captureScene = new QCheckBox(text("Image.CaptureScene"));
+    captureScene->setChecked(config.captureScene);
     auto *endAction = new QComboBox;
     endAction->addItem(text("End.Edit"), static_cast<int>(EndAction::Edit));
     endAction->addItem(text("End.Delete"), static_cast<int>(EndAction::Delete));
@@ -80,6 +96,9 @@ bool showSettingsDialog(QWidget *parent, Config &config)
     form->addRow(QString(), hint("Post.DelayHint"));
     form->addRow(text("Post.Text"), body);
     form->addRow(QString(), hint("Post.Placeholders"));
+    form->addRow(text("Image.Label"), imageRow);
+    form->addRow(QString(), captureScene);
+    form->addRow(QString(), hint("Image.Hint"));
     form->addRow(text("End.Action"), endAction);
     form->addRow(text("End.Text"), endText);
 
@@ -100,6 +119,8 @@ bool showSettingsDialog(QWidget *parent, Config &config)
     config.text = body->toPlainText();
     config.endAction = static_cast<EndAction>(endAction->currentData().toInt());
     config.endText = endText->toPlainText();
+    config.imagePath = image->text().trimmed();
+    config.captureScene = captureScene->isChecked();
     return true;
 }
 

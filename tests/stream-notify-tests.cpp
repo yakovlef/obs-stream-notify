@@ -53,12 +53,37 @@ void testReplyMarkup()
 void testSendMessageBody()
 {
     using namespace stream_notify;
-    const QUrlQuery form(QString::fromUtf8(telegram::sendMessageBody("@chan", Post{"Hi & bye", "Watch", "https://x"})));
+    const QUrlQuery form(QString::fromUtf8(telegram::sendMessageBody("@chan", Post{"Hi & bye", "Watch", "https://x", {}})));
     expect(form.queryItemValue("chat_id") == "@chan", "chat id is sent");
     expect(form.queryItemValue("text", QUrl::FullyDecoded) == "Hi & bye", "text survives form encoding");
     expect(form.hasQueryItem("reply_markup"), "button adds reply markup");
-    const QUrlQuery plain(QString::fromUtf8(telegram::sendMessageBody("@chan", Post{"Hi", "", ""})));
+    const QUrlQuery plain(QString::fromUtf8(telegram::sendMessageBody("@chan", Post{"Hi", "", "", {}})));
     expect(!plain.hasQueryItem("reply_markup"), "no button means no reply markup");
+}
+
+void testEditAndDeleteBodies()
+{
+    using namespace stream_notify;
+    const QUrlQuery edit(QString::fromUtf8(telegram::editMessageBody("@chan", 42, Post{"Ended", "", "", {}})));
+    expect(edit.queryItemValue("message_id") == "42" && edit.queryItemValue("text") == "Ended",
+           "edit body has message id and new text");
+    const QUrlQuery caption(QString::fromUtf8(telegram::editCaptionBody("@chan", 42, Post{"Ended", "", "", {}})));
+    expect(caption.queryItemValue("caption") == "Ended" && !caption.hasQueryItem("text"),
+           "caption edit uses the caption field");
+    const QUrlQuery remove(QString::fromUtf8(telegram::deleteMessageBody("@chan", 42)));
+    expect(remove.queryItemValue("chat_id") == "@chan" && remove.queryItemValue("message_id") == "42",
+           "delete body has chat and message id");
+}
+
+void testLimitText()
+{
+    using stream_notify::telegram::limitText;
+    expect(limitText("short", 10) == "short", "short text is unchanged");
+    const QString cut = limitText(QString(20, 'a'), 10);
+    expect(cut.size() == 10 && cut.endsWith(QChar(0x2026)), "long text is cut with an ellipsis");
+    const QString emoji = QString(8, 'a') + QString::fromUtf8("\xF0\x9F\x94\xB4") + "tail";
+    const QString safe = limitText(emoji, 10);
+    expect(!safe.at(safe.size() - 2).isHighSurrogate(), "emoji is not split in half");
 }
 
 void testHideToken()
@@ -77,6 +102,8 @@ int main()
     testRenderPostText();
     testReplyMarkup();
     testSendMessageBody();
+    testEditAndDeleteBodies();
+    testLimitText();
     testHideToken();
     if (failures == 0) std::cout << "All tests passed\n";
     return failures == 0 ? 0 : 1;
