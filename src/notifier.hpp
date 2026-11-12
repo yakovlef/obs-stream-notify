@@ -26,6 +26,7 @@ public:
     using Callback = std::function<void(qint64 messageId, const QString &error)>;
 
     virtual ~Notifier() = default;
+    virtual void verify(Callback done) = 0;
     virtual void publish(const Post &post, Callback done) = 0;
     virtual void edit(qint64 messageId, const Post &post, Callback done) = 0;
     virtual void remove(qint64 messageId, Callback done) = 0;

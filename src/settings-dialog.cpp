@@ -41,7 +41,7 @@ QLabel *hint(const char *key)
 
 } // namespace
 
-bool showSettingsDialog(QWidget *parent, Config &config)
+bool showSettingsDialog(QWidget *parent, Config &config, const std::function<void(const Config &)> &sendTest)
 {
     QDialog dialog(parent);
     dialog.setWindowTitle(text("Settings.Title"));
@@ -103,6 +103,7 @@ bool showSettingsDialog(QWidget *parent, Config &config)
     form->addRow(text("End.Text"), endText);
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel);
+    auto *test = buttons->addButton(text("Post.Test"), QDialogButtonBox::ActionRole);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
 
@@ -110,17 +111,24 @@ bool showSettingsDialog(QWidget *parent, Config &config)
     layout->addLayout(form);
     layout->addWidget(buttons);
 
+    auto read = [&] {
+        Config result = config;
+        result.token = token->text().trimmed();
+        result.chat = chat->text().trimmed();
+        result.url = url->text().trimmed();
+        result.button = button->text().trimmed();
+        result.delay = delay->value();
+        result.text = body->toPlainText();
+        result.endAction = static_cast<EndAction>(endAction->currentData().toInt());
+        result.endText = endText->toPlainText();
+        result.imagePath = image->text().trimmed();
+        result.captureScene = captureScene->isChecked();
+        return result;
+    };
+    QObject::connect(test, &QPushButton::clicked, &dialog, [&] { sendTest(read()); });
+
     if (dialog.exec() != QDialog::Accepted) return false;
-    config.token = token->text().trimmed();
-    config.chat = chat->text().trimmed();
-    config.url = url->text().trimmed();
-    config.button = button->text().trimmed();
-    config.delay = delay->value();
-    config.text = body->toPlainText();
-    config.endAction = static_cast<EndAction>(endAction->currentData().toInt());
-    config.endText = endText->toPlainText();
-    config.imagePath = image->text().trimmed();
-    config.captureScene = captureScene->isChecked();
+    config = read();
     return true;
 }
 

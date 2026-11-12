@@ -17,6 +17,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QTimer>
 #include <QWidget>
@@ -29,6 +30,11 @@ OBS_MODULE_USE_DEFAULT_LOCALE("stream-notify", "en-US")
 namespace {
 
 using namespace stream_notify;
+
+QString text(const char *key)
+{
+    return QString::fromUtf8(obs_module_text(key));
+}
 
 class Plugin {
 public:
@@ -56,6 +62,32 @@ public:
         if (!image.isEmpty()) QFile::remove(file);
         else image = readFile(config.imagePath);
         send(image);
+    }
+
+    void sendTest(const Config &draft)
+    {
+        auto *mainWindow = static_cast<QWidget *>(obs_frontend_get_main_window());
+        if (draft.token.isEmpty() || draft.chat.isEmpty()) {
+            QMessageBox::warning(mainWindow, text("TestPost.Title"), text("TestPost.MissingSettings"));
+            return;
+        }
+        auto test = std::make_shared<TelegramNotifier>(network, draft.token, draft.chat);
+        auto warn = [mainWindow](const QString &message) {
+            QMessageBox::warning(mainWindow, text("TestPost.Title"), message);
+        };
+        test->verify([test, draft, mainWindow, warn](qint64, const QString &error) {
+            if (!error.isEmpty()) {
+                warn(text("TestPost.InvalidToken").arg(error));
+                return;
+            }
+            const Post post{renderPostText(draft.text, {{"url", draft.url}}), draft.button, draft.url,
+                            readFile(draft.imagePath)};
+            test->publish(post, [test, mainWindow, warn](qint64, const QString &publishError) {
+                if (publishError.isEmpty())
+                    QMessageBox::information(mainWindow, text("TestPost.Title"), text("TestPost.Sent"));
+                else warn(text("TestPost.Failed").arg(publishError));
+            });
+        });
     }
 
     void streamingStopped()
@@ -146,7 +178,10 @@ void openSettings(void *)
 {
     auto *mainWindow = static_cast<QWidget *>(obs_frontend_get_main_window());
     auto config = loadConfig();
-    if (showSettingsDialog(mainWindow, config)) saveConfig(config);
+    const auto sendTest = [](const Config &draft) {
+        if (plugin) plugin->sendTest(draft);
+    };
+    if (showSettingsDialog(mainWindow, config, sendTest)) saveConfig(config);
 }
 
 // OBS does not ship a Qt TLS backend, so the plugin bundles one in data/tls.
