@@ -11,6 +11,8 @@
 
 namespace stream_notify {
 
+enum class EndAction { Keep, Delete, Edit };
+
 struct Config {
     QString token;
     QString chat;
@@ -18,6 +20,8 @@ struct Config {
     QString button;
     QString url;
     int delay = 5;
+    EndAction endAction = EndAction::Edit;
+    QString endText;
 };
 
 Config loadConfig();

@@ -9,6 +9,7 @@
 
 #include <obs-module.h>
 
+#include <QComboBox>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QFormLayout>
@@ -55,6 +56,18 @@ bool showSettingsDialog(QWidget *parent, Config &config)
     delay->setValue(config.delay);
     auto *body = new QPlainTextEdit(config.text);
     body->setPlaceholderText(text("Post.TextPlaceholder"));
+    auto *endAction = new QComboBox;
+    endAction->addItem(text("End.Edit"), static_cast<int>(EndAction::Edit));
+    endAction->addItem(text("End.Delete"), static_cast<int>(EndAction::Delete));
+    endAction->addItem(text("End.Keep"), static_cast<int>(EndAction::Keep));
+    endAction->setCurrentIndex(endAction->findData(static_cast<int>(config.endAction)));
+    auto *endText = new QPlainTextEdit(config.endText);
+    endText->setMaximumHeight(80);
+    auto updateEndText = [endAction, endText] {
+        endText->setEnabled(endAction->currentData().toInt() == static_cast<int>(EndAction::Edit));
+    };
+    QObject::connect(endAction, &QComboBox::currentIndexChanged, endText, updateEndText);
+    updateEndText();
 
     auto *form = new QFormLayout;
     form->addRow(text("Telegram.BotToken"), token);
@@ -67,6 +80,8 @@ bool showSettingsDialog(QWidget *parent, Config &config)
     form->addRow(QString(), hint("Post.DelayHint"));
     form->addRow(text("Post.Text"), body);
     form->addRow(QString(), hint("Post.Placeholders"));
+    form->addRow(text("End.Action"), endAction);
+    form->addRow(text("End.Text"), endText);
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
@@ -83,6 +98,8 @@ bool showSettingsDialog(QWidget *parent, Config &config)
     config.button = button->text().trimmed();
     config.delay = delay->value();
     config.text = body->toPlainText();
+    config.endAction = static_cast<EndAction>(endAction->currentData().toInt());
+    config.endText = endText->toPlainText();
     return true;
 }
 

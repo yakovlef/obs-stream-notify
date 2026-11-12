@@ -31,6 +31,25 @@ QString readString(obs_data_t *data, const char *name)
     return QString::fromUtf8(obs_data_get_string(data, name));
 }
 
+EndAction parseEndAction(const QString &value)
+{
+    if (value == "keep") return EndAction::Keep;
+    if (value == "delete") return EndAction::Delete;
+    return EndAction::Edit;
+}
+
+const char *endActionName(EndAction action)
+{
+    switch (action) {
+    case EndAction::Keep:
+        return "keep";
+    case EndAction::Delete:
+        return "delete";
+    default:
+        return "edit";
+    }
+}
+
 } // namespace
 
 Config loadConfig()
@@ -41,12 +60,15 @@ Config loadConfig()
     obs_data_set_default_string(data, "post_text", obs_module_text("Post.DefaultText"));
     obs_data_set_default_string(data, "post_button", obs_module_text("Post.DefaultButton"));
     obs_data_set_default_int(data, "post_delay", 5);
+    obs_data_set_default_string(data, "end_text", obs_module_text("End.DefaultText"));
     config.token = unprotectSecret(readString(data, "telegram_token"));
     config.chat = readString(data, "telegram_chat");
     config.text = readString(data, "post_text");
     config.button = readString(data, "post_button");
     config.url = readString(data, "post_url");
     config.delay = static_cast<int>(obs_data_get_int(data, "post_delay"));
+    config.endAction = parseEndAction(readString(data, "end_action"));
+    config.endText = readString(data, "end_text");
     obs_data_release(data);
     return config;
 }
@@ -60,6 +82,8 @@ void saveConfig(const Config &config)
     obs_data_set_string(data, "post_button", config.button.toUtf8().constData());
     obs_data_set_string(data, "post_url", config.url.toUtf8().constData());
     obs_data_set_int(data, "post_delay", config.delay);
+    obs_data_set_string(data, "end_action", endActionName(config.endAction));
+    obs_data_set_string(data, "end_text", config.endText.toUtf8().constData());
     if (!obs_data_save_json_safe(data, configPath().constData(), "tmp", "bak"))
         blog(LOG_WARNING, "[stream-notify] Could not save settings");
     obs_data_release(data);
