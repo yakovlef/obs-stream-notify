@@ -9,10 +9,12 @@
 
 #include "config.hpp"
 
+#include <functional>
+
 class QWidget;
 
 namespace stream_notify {
 
-bool showSettingsDialog(QWidget *parent, Config &config);
+bool showSettingsDialog(QWidget *parent, Config &config, const std::function<void(const Config &)> &sendTest);
 
 } // namespace stream_notify

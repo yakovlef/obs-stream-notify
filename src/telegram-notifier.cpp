@@ -24,6 +24,11 @@ TelegramNotifier::TelegramNotifier(QNetworkAccessManager &network, QString token
 {
 }
 
+void TelegramNotifier::verify(Callback done)
+{
+    call("getMe", {}, std::move(done));
+}
+
 void TelegramNotifier::publish(const Post &post, Callback done)
 {
     if (!post.image.isEmpty()) {
