@@ -54,7 +54,7 @@ void testSendMessageBody()
 {
     using namespace stream_notify;
     const QUrlQuery form(QString::fromUtf8(telegram::sendMessageBody("@chan", Post{"Hi & bye", "Watch", "https://x", {}})));
-    expect(form.queryItemValue("chat_id") == "@chan", "chat id is sent");
+    expect(form.queryItemValue("chat_id", QUrl::FullyDecoded) == "@chan", "chat id is sent");
     expect(form.queryItemValue("text", QUrl::FullyDecoded) == "Hi & bye", "text survives form encoding");
     expect(form.hasQueryItem("reply_markup"), "button adds reply markup");
     const QByteArray plus = telegram::sendMessageBody("@chan", Post{"C++ 1+1", "", "", {}});
@@ -67,13 +67,13 @@ void testEditAndDeleteBodies()
 {
     using namespace stream_notify;
     const QUrlQuery edit(QString::fromUtf8(telegram::editMessageBody("@chan", 42, Post{"Ended", "", "", {}})));
-    expect(edit.queryItemValue("message_id") == "42" && edit.queryItemValue("text") == "Ended",
+    expect(edit.queryItemValue("message_id", QUrl::FullyDecoded) == "42" && edit.queryItemValue("text", QUrl::FullyDecoded) == "Ended",
            "edit body has message id and new text");
     const QUrlQuery caption(QString::fromUtf8(telegram::editCaptionBody("@chan", 42, Post{"Ended", "", "", {}})));
-    expect(caption.queryItemValue("caption") == "Ended" && !caption.hasQueryItem("text"),
+    expect(caption.queryItemValue("caption", QUrl::FullyDecoded) == "Ended" && !caption.hasQueryItem("text"),
            "caption edit uses the caption field");
     const QUrlQuery remove(QString::fromUtf8(telegram::deleteMessageBody("@chan", 42)));
-    expect(remove.queryItemValue("chat_id") == "@chan" && remove.queryItemValue("message_id") == "42",
+    expect(remove.queryItemValue("chat_id", QUrl::FullyDecoded) == "@chan" && remove.queryItemValue("message_id", QUrl::FullyDecoded) == "42",
            "delete body has chat and message id");
 }
 
