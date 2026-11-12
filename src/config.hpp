@@ -22,6 +22,8 @@ struct Config {
     int delay = 5;
     EndAction endAction = EndAction::Edit;
     QString endText;
+    QString imagePath;
+    bool captureScene = false;
 };
 
 Config loadConfig();

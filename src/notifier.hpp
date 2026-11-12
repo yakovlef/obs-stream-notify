@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <QByteArray>
 #include <QString>
 
 #include <functional>
@@ -17,6 +18,7 @@ struct Post {
     QString text;
     QString buttonText;
     QString url;
+    QByteArray image;
 };
 
 class Notifier {

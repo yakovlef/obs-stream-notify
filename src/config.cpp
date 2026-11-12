@@ -69,6 +69,8 @@ Config loadConfig()
     config.delay = static_cast<int>(obs_data_get_int(data, "post_delay"));
     config.endAction = parseEndAction(readString(data, "end_action"));
     config.endText = readString(data, "end_text");
+    config.imagePath = readString(data, "image_path");
+    config.captureScene = obs_data_get_bool(data, "capture_scene");
     obs_data_release(data);
     return config;
 }
@@ -84,6 +86,8 @@ void saveConfig(const Config &config)
     obs_data_set_int(data, "post_delay", config.delay);
     obs_data_set_string(data, "end_action", endActionName(config.endAction));
     obs_data_set_string(data, "end_text", config.endText.toUtf8().constData());
+    obs_data_set_string(data, "image_path", config.imagePath.toUtf8().constData());
+    obs_data_set_bool(data, "capture_scene", config.captureScene);
     if (!obs_data_save_json_safe(data, configPath().constData(), "tmp", "bak"))
         blog(LOG_WARNING, "[stream-notify] Could not save settings");
     obs_data_release(data);
