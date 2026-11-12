@@ -25,6 +25,8 @@ public:
 
     virtual ~Notifier() = default;
     virtual void publish(const Post &post, Callback done) = 0;
+    virtual void edit(qint64 messageId, const Post &post, Callback done) = 0;
+    virtual void remove(qint64 messageId, Callback done) = 0;
 };
 
 } // namespace stream_notify

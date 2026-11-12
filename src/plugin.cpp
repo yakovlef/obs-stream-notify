@@ -40,14 +40,24 @@ public:
     void streamingStarted()
     {
         config = loadConfig();
+        ++session;
         timer.start(config.delay * 1000);
     }
 
-    void streamingStopped() { timer.stop(); }
+    void streamingStopped()
+    {
+        ++session;
+        timer.stop();
+        if (messageId > 0) finishPost(notifier, messageId);
+        messageId = 0;
+    }
 
 private:
     Config config;
     QTimer timer;
+    int session = 0;
+    qint64 messageId = 0;
+    std::shared_ptr<Notifier> notifier;
     QNetworkAccessManager network;
 
     void publish()
@@ -58,10 +68,27 @@ private:
             return;
         }
         const Post post{renderPostText(config.text, {{"url", config.url}}), config.button, config.url};
-        TelegramNotifier(network, config.token, config.chat).publish(post, [](qint64 id, const QString &error) {
-            if (id > 0) blog(LOG_INFO, "[stream-notify] Telegram post %lld sent", id);
-            else blog(LOG_WARNING, "[stream-notify] Telegram post failed: %s", error.toUtf8().constData());
+        notifier = std::make_shared<TelegramNotifier>(network, config.token, config.chat);
+        notifier->publish(post, [this, sentSession = session, sent = notifier](qint64 id, const QString &error) {
+            if (!error.isEmpty()) {
+                blog(LOG_WARNING, "[stream-notify] Telegram post failed: %s", error.toUtf8().constData());
+                return;
+            }
+            blog(LOG_INFO, "[stream-notify] Telegram post %lld sent", id);
+            if (sentSession == session) messageId = id;
+            else finishPost(sent, id);
         });
+    }
+
+    void finishPost(const std::shared_ptr<Notifier> &target, qint64 id)
+    {
+        if (!target || config.endAction == EndAction::Keep) return;
+        auto done = [](qint64, const QString &error) {
+            if (!error.isEmpty())
+                blog(LOG_WARNING, "[stream-notify] Telegram end update failed: %s", error.toUtf8().constData());
+        };
+        if (config.endAction == EndAction::Delete) target->remove(id, done);
+        else target->edit(id, Post{renderPostText(config.endText, {{"url", config.url}}), {}, {}}, done);
     }
 };
 

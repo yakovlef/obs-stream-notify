@@ -16,6 +16,8 @@ namespace stream_notify::telegram {
 
 QUrl endpoint(const QString &token, const QString &method);
 QByteArray sendMessageBody(const QString &chat, const Post &post);
+QByteArray editMessageBody(const QString &chat, qint64 messageId, const Post &post);
+QByteArray deleteMessageBody(const QString &chat, qint64 messageId);
 QString replyMarkup(const QString &buttonText, const QString &url);
 QString hideToken(QString text, const QString &token);
 

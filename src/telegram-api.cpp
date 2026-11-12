@@ -19,14 +19,43 @@ QUrl endpoint(const QString &token, const QString &method)
     return QUrl("https://api.telegram.org/bot" + token + "/" + method);
 }
 
-QByteArray sendMessageBody(const QString &chat, const Post &post)
+namespace {
+
+QUrlQuery messageForm(const QString &chat, const Post &post)
 {
     QUrlQuery form;
     form.addQueryItem("chat_id", chat);
     form.addQueryItem("text", post.text);
     const QString markup = replyMarkup(post.buttonText, post.url);
     if (!markup.isEmpty()) form.addQueryItem("reply_markup", markup);
+    return form;
+}
+
+QByteArray encode(const QUrlQuery &form)
+{
     return form.toString(QUrl::FullyEncoded).toUtf8();
+}
+
+} // namespace
+
+QByteArray sendMessageBody(const QString &chat, const Post &post)
+{
+    return encode(messageForm(chat, post));
+}
+
+QByteArray editMessageBody(const QString &chat, qint64 messageId, const Post &post)
+{
+    QUrlQuery form = messageForm(chat, post);
+    form.addQueryItem("message_id", QString::number(messageId));
+    return encode(form);
+}
+
+QByteArray deleteMessageBody(const QString &chat, qint64 messageId)
+{
+    QUrlQuery form;
+    form.addQueryItem("chat_id", chat);
+    form.addQueryItem("message_id", QString::number(messageId));
+    return encode(form);
 }
 
 QString replyMarkup(const QString &buttonText, const QString &url)
