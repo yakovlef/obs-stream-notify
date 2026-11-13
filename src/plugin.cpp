@@ -12,6 +12,7 @@
 #include "message-format.hpp"
 #include "settings-dialog.hpp"
 #include "telegram-notifier.hpp"
+#include "twitch-client.hpp"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -38,7 +39,7 @@ QString text(const char *key)
 
 class Plugin {
 public:
-    Plugin()
+    Plugin() : twitch(network)
     {
         timer.setSingleShot(true);
         QObject::connect(&timer, &QTimer::timeout, &timer, [this] { publish(); });
@@ -62,6 +63,17 @@ public:
         if (!image.isEmpty()) QFile::remove(file);
         else image = readFile(config.imagePath);
         send(image);
+    }
+
+    SettingsActions settingsActions()
+    {
+        return {[this](const Config &draft) { sendTest(draft); }, twitch.login(),
+                [this](std::function<void(const QString &)> setStatus) {
+                    twitch.connectAccount([setStatus](const QString &status) {
+                        blog(LOG_INFO, "[stream-notify] Twitch: %s", status.toUtf8().constData());
+                        setStatus(status);
+                    });
+                }};
     }
 
     void sendTest(const Config &draft)
@@ -107,6 +119,7 @@ private:
     bool awaitingScreenshot = false;
     std::shared_ptr<Notifier> notifier;
     QNetworkAccessManager network;
+    TwitchClient twitch;
 
     void publish()
     {
@@ -178,10 +191,8 @@ void openSettings(void *)
 {
     auto *mainWindow = static_cast<QWidget *>(obs_frontend_get_main_window());
     auto config = loadConfig();
-    const auto sendTest = [](const Config &draft) {
-        if (plugin) plugin->sendTest(draft);
-    };
-    if (showSettingsDialog(mainWindow, config, sendTest)) saveConfig(config);
+    if (!plugin) return;
+    if (showSettingsDialog(mainWindow, config, plugin->settingsActions())) saveConfig(config);
 }
 
 // OBS does not ship a Qt TLS backend, so the plugin bundles one in data/tls.

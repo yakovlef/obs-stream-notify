@@ -26,6 +26,46 @@ QByteArray configPath()
     return result.toUtf8();
 }
 
+obs_data_t *openConfig()
+{
+    obs_data_t *data = obs_data_create_from_json_file_safe(configPath().constData(), "bak");
+    return data ? data : obs_data_create();
+}
+
+void writeConfig(obs_data_t *data)
+{
+    writeConfig(data);
+}
+
+TwitchSession loadTwitchSession()
+{
+    obs_data_t *data = openConfig();
+    TwitchSession session;
+    session.access = unprotectSecret(readString(data, "twitch_access"));
+    session.refresh = unprotectSecret(readString(data, "twitch_refresh"));
+    session.userId = readString(data, "twitch_user_id");
+    session.login = readString(data, "twitch_login");
+    session.expires = QDateTime::fromString(readString(data, "twitch_expires"), Qt::ISODate);
+    obs_data_release(data);
+    return session;
+}
+
+void saveTwitchSession(const TwitchSession &session)
+{
+    obs_data_t *data = openConfig();
+    setString(data, "twitch_access", protectSecret(session.access));
+    setString(data, "twitch_refresh", protectSecret(session.refresh));
+    setString(data, "twitch_user_id", session.userId);
+    setString(data, "twitch_login", session.login);
+    setString(data, "twitch_expires", session.expires.toString(Qt::ISODate));
+    writeConfig(data);
+}
+
+void setString(obs_data_t *data, const char *name, const QString &value)
+{
+    obs_data_set_string(data, name, value.toUtf8().constData());
+}
+
 QString readString(obs_data_t *data, const char *name)
 {
     return QString::fromUtf8(obs_data_get_string(data, name));
@@ -55,8 +95,7 @@ const char *endActionName(EndAction action)
 Config loadConfig()
 {
     Config config;
-    obs_data_t *data = obs_data_create_from_json_file_safe(configPath().constData(), "bak");
-    if (!data) data = obs_data_create();
+    obs_data_t *data = openConfig();
     obs_data_set_default_string(data, "post_text", obs_module_text("Post.DefaultText"));
     obs_data_set_default_string(data, "post_button", obs_module_text("Post.DefaultButton"));
     obs_data_set_default_int(data, "post_delay", 5);
@@ -77,7 +116,7 @@ Config loadConfig()
 
 void saveConfig(const Config &config)
 {
-    obs_data_t *data = obs_data_create();
+    obs_data_t *data = openConfig();
     obs_data_set_string(data, "telegram_token", protectSecret(config.token).toUtf8().constData());
     obs_data_set_string(data, "telegram_chat", config.chat.toUtf8().constData());
     obs_data_set_string(data, "post_text", config.text.toUtf8().constData());

@@ -15,6 +15,12 @@ class QWidget;
 
 namespace stream_notify {
 
-bool showSettingsDialog(QWidget *parent, Config &config, const std::function<void(const Config &)> &sendTest);
+struct SettingsActions {
+    std::function<void(const Config &)> sendTest;
+    QString twitchLogin;
+    std::function<void(std::function<void(const QString &)> setStatus)> connectTwitch;
+};
+
+bool showSettingsDialog(QWidget *parent, Config &config, const SettingsActions &actions);
 
 } // namespace stream_notify
