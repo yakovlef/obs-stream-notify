@@ -38,6 +38,22 @@ void testRenderPostText()
     expect(renderPostText("{unknown}", {}) == "{unknown}", "unknown placeholder is kept");
 }
 
+void testResolveStreamUrl()
+{
+    using stream_notify::resolveStreamUrl;
+    expect(resolveStreamUrl("", "streamer") == "https://twitch.tv/streamer", "twitch login gives the stream url");
+    expect(resolveStreamUrl("https://example.com/live", "streamer") == "https://example.com/live",
+           "custom url wins over twitch");
+    expect(resolveStreamUrl("", "").isEmpty(), "no inputs give no url");
+}
+
+void testDefaultTemplateWithoutTwitch()
+{
+    const QString rendered = stream_notify::renderPostText("Stream started!\n{title}\n{category}\n\nWatch:\n{url}",
+                                                           {{"title", ""}, {"category", ""}, {"url", "https://x"}});
+    expect(rendered == "Stream started!\n\nWatch:\nhttps://x", "missing title and category lines are dropped");
+}
+
 void testReplyMarkup()
 {
     using stream_notify::telegram::replyMarkup;
@@ -102,6 +118,8 @@ void testHideToken()
 int main()
 {
     testRenderPostText();
+    testResolveStreamUrl();
+    testDefaultTemplateWithoutTwitch();
     testReplyMarkup();
     testSendMessageBody();
     testEditAndDeleteBodies();
