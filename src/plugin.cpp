@@ -12,11 +12,13 @@
 #include "message-format.hpp"
 #include "settings-dialog.hpp"
 #include "telegram-notifier.hpp"
+#include "twitch-client.hpp"
 
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QHash>
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QTimer>
@@ -38,7 +40,7 @@ QString text(const char *key)
 
 class Plugin {
 public:
-    Plugin()
+    Plugin() : twitch(network)
     {
         timer.setSingleShot(true);
         QObject::connect(&timer, &QTimer::timeout, &timer, [this] { publish(); });
@@ -64,6 +66,17 @@ public:
         send(image);
     }
 
+    SettingsActions settingsActions()
+    {
+        return {[this](const Config &draft) { sendTest(draft); }, twitch.login(),
+                [this](std::function<void(const QString &)> setStatus) {
+                    twitch.connectAccount([setStatus](const QString &status) {
+                        blog(LOG_INFO, "[stream-notify] Twitch: %s", status.toUtf8().constData());
+                        setStatus(status);
+                    });
+                }};
+    }
+
     void sendTest(const Config &draft)
     {
         auto *mainWindow = static_cast<QWidget *>(obs_frontend_get_main_window());
@@ -71,16 +84,23 @@ public:
             QMessageBox::warning(mainWindow, text("TestPost.Title"), text("TestPost.MissingSettings"));
             return;
         }
+        twitch.fetchChannel([this, draft](const ChannelInfo &info) { sendTestPost(draft, info); });
+    }
+
+    void sendTestPost(const Config &draft, const ChannelInfo &info)
+    {
+        auto *mainWindow = static_cast<QWidget *>(obs_frontend_get_main_window());
         auto test = std::make_shared<TelegramNotifier>(network, draft.token, draft.chat);
+        const auto testValues = postValues(draft, info);
         auto warn = [mainWindow](const QString &message) {
             QMessageBox::warning(mainWindow, text("TestPost.Title"), message);
         };
-        test->verify([test, draft, mainWindow, warn](qint64, const QString &error) {
+        test->verify([test, draft, testValues, mainWindow, warn](qint64, const QString &error) {
             if (!error.isEmpty()) {
                 warn(text("TestPost.InvalidToken").arg(error));
                 return;
             }
-            const Post post{renderPostText(draft.text, {{"url", draft.url}}), draft.button, draft.url,
+            const Post post{renderPostText(draft.text, testValues), draft.button, testValues.value("url"),
                             readFile(draft.imagePath)};
             test->publish(post, [test, mainWindow, warn](qint64, const QString &publishError) {
                 if (publishError.isEmpty())
@@ -105,8 +125,10 @@ private:
     int session = 0;
     qint64 messageId = 0;
     bool awaitingScreenshot = false;
+    QHash<QString, QString> values;
     std::shared_ptr<Notifier> notifier;
     QNetworkAccessManager network;
+    TwitchClient twitch;
 
     void publish()
     {
@@ -115,6 +137,22 @@ private:
             blog(LOG_WARNING, "[stream-notify] Telegram bot token or channel is not set");
             return;
         }
+        twitch.fetchChannel([this, expected = session](const ChannelInfo &info) {
+            if (expected != session || !obs_frontend_streaming_active()) return;
+            values = postValues(config, info);
+            prepareImage();
+        });
+    }
+
+    QHash<QString, QString> postValues(const Config &source, const ChannelInfo &info) const
+    {
+        return {{"title", info.title},
+                {"category", info.category},
+                {"url", resolveStreamUrl(source.url, twitch.login())}};
+    }
+
+    void prepareImage()
+    {
         if (!config.captureScene) {
             send(readFile(config.imagePath));
             return;
@@ -138,7 +176,7 @@ private:
 
     void send(const QByteArray &image)
     {
-        const Post post{renderPostText(config.text, {{"url", config.url}}), config.button, config.url, image};
+        const Post post{renderPostText(config.text, values), config.button, values.value("url"), image};
         notifier = std::make_shared<TelegramNotifier>(network, config.token, config.chat);
         notifier->publish(post, [this, sentSession = session, sent = notifier](qint64 id, const QString &error) {
             if (!error.isEmpty()) {
@@ -159,7 +197,7 @@ private:
                 blog(LOG_WARNING, "[stream-notify] Telegram end update failed: %s", error.toUtf8().constData());
         };
         if (config.endAction == EndAction::Delete) target->remove(id, done);
-        else target->edit(id, Post{renderPostText(config.endText, {{"url", config.url}}), {}, {}, {}}, done);
+        else target->edit(id, Post{renderPostText(config.endText, values), {}, {}, {}}, done);
     }
 };
 
@@ -178,10 +216,8 @@ void openSettings(void *)
 {
     auto *mainWindow = static_cast<QWidget *>(obs_frontend_get_main_window());
     auto config = loadConfig();
-    const auto sendTest = [](const Config &draft) {
-        if (plugin) plugin->sendTest(draft);
-    };
-    if (showSettingsDialog(mainWindow, config, sendTest)) saveConfig(config);
+    if (!plugin) return;
+    if (showSettingsDialog(mainWindow, config, plugin->settingsActions())) saveConfig(config);
 }
 
 // OBS does not ship a Qt TLS backend, so the plugin bundles one in data/tls.

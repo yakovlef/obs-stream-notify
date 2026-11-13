@@ -24,6 +24,8 @@ add_library(
   src/telegram-api.hpp
   src/telegram-notifier.cpp
   src/telegram-notifier.hpp
+  src/twitch-client.cpp
+  src/twitch-client.hpp
 )
 find_package(libobs REQUIRED)
 find_package(obs-frontend-api REQUIRED)

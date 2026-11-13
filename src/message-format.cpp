@@ -11,6 +11,13 @@
 
 namespace stream_notify {
 
+QString resolveStreamUrl(const QString &customUrl, const QString &twitchLogin)
+{
+    if (!customUrl.isEmpty()) return customUrl;
+    if (!twitchLogin.isEmpty()) return "https://twitch.tv/" + twitchLogin;
+    return {};
+}
+
 QString renderPostText(const QString &postTemplate, const QHash<QString, QString> &values)
 {
     QStringList lines;

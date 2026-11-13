@@ -19,6 +19,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPlainTextEdit>
+#include <QPointer>
 #include <QPushButton>
 #include <QSpinBox>
 #include <QVBoxLayout>
@@ -41,11 +42,25 @@ QLabel *hint(const char *key)
 
 } // namespace
 
-bool showSettingsDialog(QWidget *parent, Config &config, const std::function<void(const Config &)> &sendTest)
+bool showSettingsDialog(QWidget *parent, Config &config, const SettingsActions &actions)
 {
     QDialog dialog(parent);
     dialog.setWindowTitle(text("Settings.Title"));
     dialog.setMinimumWidth(480);
+
+    auto *twitchStatus = new QLabel(actions.twitchLogin.isEmpty() ? text("Twitch.Disconnected")
+                                                                  : text("Twitch.Connected").arg(actions.twitchLogin));
+    twitchStatus->setWordWrap(true);
+    twitchStatus->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    auto *twitchConnect = new QPushButton(text("Twitch.Connect"));
+    QObject::connect(twitchConnect, &QPushButton::clicked, &dialog, [&actions, twitchStatus] {
+        actions.connectTwitch([label = QPointer<QLabel>(twitchStatus)](const QString &status) {
+            if (label) label->setText(status);
+        });
+    });
+    auto *twitchRow = new QHBoxLayout;
+    twitchRow->addWidget(twitchStatus, 1);
+    twitchRow->addWidget(twitchConnect);
 
     auto *token = new QLineEdit(config.token);
     token->setEchoMode(QLineEdit::Password);
@@ -86,6 +101,7 @@ bool showSettingsDialog(QWidget *parent, Config &config, const std::function<voi
     updateEndText();
 
     auto *form = new QFormLayout;
+    form->addRow(text("Twitch.Label"), twitchRow);
     form->addRow(text("Telegram.BotToken"), token);
     form->addRow(QString(), hint("Telegram.BotHint"));
     form->addRow(text("Telegram.Channel"), chat);
@@ -125,7 +141,7 @@ bool showSettingsDialog(QWidget *parent, Config &config, const std::function<voi
         result.captureScene = captureScene->isChecked();
         return result;
     };
-    QObject::connect(test, &QPushButton::clicked, &dialog, [&] { sendTest(read()); });
+    QObject::connect(test, &QPushButton::clicked, &dialog, [&] { actions.sendTest(read()); });
 
     if (dialog.exec() != QDialog::Accepted) return false;
     config = read();

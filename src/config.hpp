@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <QDateTime>
 #include <QString>
 
 namespace stream_notify {
@@ -26,7 +27,17 @@ struct Config {
     bool captureScene = false;
 };
 
+struct TwitchSession {
+    QString access;
+    QString refresh;
+    QString userId;
+    QString login;
+    QDateTime expires;
+};
+
 Config loadConfig();
 void saveConfig(const Config &config);
+TwitchSession loadTwitchSession();
+void saveTwitchSession(const TwitchSession &session);
 
 } // namespace stream_notify
