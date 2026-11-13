@@ -34,31 +34,9 @@ obs_data_t *openConfig()
 
 void writeConfig(obs_data_t *data)
 {
-    writeConfig(data);
-}
-
-TwitchSession loadTwitchSession()
-{
-    obs_data_t *data = openConfig();
-    TwitchSession session;
-    session.access = unprotectSecret(readString(data, "twitch_access"));
-    session.refresh = unprotectSecret(readString(data, "twitch_refresh"));
-    session.userId = readString(data, "twitch_user_id");
-    session.login = readString(data, "twitch_login");
-    session.expires = QDateTime::fromString(readString(data, "twitch_expires"), Qt::ISODate);
+    if (!obs_data_save_json_safe(data, configPath().constData(), "tmp", "bak"))
+        blog(LOG_WARNING, "[stream-notify] Could not save settings");
     obs_data_release(data);
-    return session;
-}
-
-void saveTwitchSession(const TwitchSession &session)
-{
-    obs_data_t *data = openConfig();
-    setString(data, "twitch_access", protectSecret(session.access));
-    setString(data, "twitch_refresh", protectSecret(session.refresh));
-    setString(data, "twitch_user_id", session.userId);
-    setString(data, "twitch_login", session.login);
-    setString(data, "twitch_expires", session.expires.toString(Qt::ISODate));
-    writeConfig(data);
 }
 
 void setString(obs_data_t *data, const char *name, const QString &value)
@@ -127,9 +105,31 @@ void saveConfig(const Config &config)
     obs_data_set_string(data, "end_text", config.endText.toUtf8().constData());
     obs_data_set_string(data, "image_path", config.imagePath.toUtf8().constData());
     obs_data_set_bool(data, "capture_scene", config.captureScene);
-    if (!obs_data_save_json_safe(data, configPath().constData(), "tmp", "bak"))
-        blog(LOG_WARNING, "[stream-notify] Could not save settings");
+    writeConfig(data);
+}
+
+TwitchSession loadTwitchSession()
+{
+    obs_data_t *data = openConfig();
+    TwitchSession session;
+    session.access = unprotectSecret(readString(data, "twitch_access"));
+    session.refresh = unprotectSecret(readString(data, "twitch_refresh"));
+    session.userId = readString(data, "twitch_user_id");
+    session.login = readString(data, "twitch_login");
+    session.expires = QDateTime::fromString(readString(data, "twitch_expires"), Qt::ISODate);
     obs_data_release(data);
+    return session;
+}
+
+void saveTwitchSession(const TwitchSession &session)
+{
+    obs_data_t *data = openConfig();
+    setString(data, "twitch_access", protectSecret(session.access));
+    setString(data, "twitch_refresh", protectSecret(session.refresh));
+    setString(data, "twitch_user_id", session.userId);
+    setString(data, "twitch_login", session.login);
+    setString(data, "twitch_expires", session.expires.toString(Qt::ISODate));
+    writeConfig(data);
 }
 
 } // namespace stream_notify
